@@ -48,7 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()  // Public endpoints (login, register)
                         .anyRequest().authenticated()
                 )
-                .httpBasic(withDefaults()); // ✅ Use withDefaults() instead of deprecated .httpBasic()
+                .httpBasic(withDefaults()); //  Use withDefaults() instead of deprecated .httpBasic()
 
         return http.build();
     }

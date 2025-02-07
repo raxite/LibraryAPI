@@ -18,7 +18,6 @@ public class Genre
     private String description;
 
     @OneToMany(mappedBy = "genre")
- //   @JsonBackReference("genre-books")
     @JsonIgnore
     private List<Book> books = new ArrayList<>(); // brauche ich das wirklich? könnte man zu zuordnung von büchern zu einem Genre verwenden, aber eventuell einfach argumentieren, dass man nur eine übersicht von genren haben möchte
 

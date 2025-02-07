@@ -27,14 +27,12 @@ public class Book
 
 
     @ManyToOne
-    //@JsonIgnore
     @JoinColumn(name = "author_id", nullable = false)
     private Author author;
 
 
 
     @ManyToOne
-   // @JsonIgnore
     @JoinColumn(name = "genre_id")
     private Genre genre;
 

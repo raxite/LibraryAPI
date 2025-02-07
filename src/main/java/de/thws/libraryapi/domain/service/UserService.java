@@ -40,31 +40,6 @@ public class UserService {
         return userRepository.save(user);
     }
 
-/*
-    public String addUserToReservationQueue(Long bookId, Long userId) {
-        Optional<Book> bookOpt = bookRepository.findById(bookId);
-        Optional<User> userOpt = userRepository.findById(userId);
-
-        if (bookOpt.isEmpty()) {
-            return "Book not found!";
-        }
-        if (userOpt.isEmpty()) {
-            return "User not found!";
-        }
-
-        Book book = bookOpt.get();
-        User user = userOpt.get();
-
-        if (book.getReservationQueue().contains(user)) {
-            return "User is already in the reservation queue!";
-        }
-
-        book.getReservationQueue().add(user);
-        bookRepository.save(book);
-
-        return "User added to reservation queue.";
-    }
-*/
 
     public String addUserToReservationQueue(Long bookId, Long userId) {
         Optional<Book> bookOpt = bookRepository.findById(bookId);
@@ -77,17 +52,17 @@ public class UserService {
         Book book = bookOpt.get();
         User user = userOpt.get();
 
-        // ❌ Benutzer kann das Buch nicht reservieren, wenn es verfügbar ist
+        //  Benutzer kann das Buch nicht reservieren, wenn es verfügbar ist
         if (Boolean.TRUE.equals(book.getAvailability())) {
             return "Book is currently available. Please borrow it instead of reserving.";
         }
 
-        // ❌ Benutzer kann das Buch nicht reservieren, wenn er es bereits ausgeliehen hat
+        //  Benutzer kann das Buch nicht reservieren, wenn er es bereits ausgeliehen hat
         if (user.getBorrowedBooks().contains(book)) {
             return "User has already borrowed this book.";
         }
 
-        // ✅ Benutzer zur Warteschlange hinzufügen, falls er nicht schon drin ist
+        //  Benutzer zur Warteschlange hinzufügen, falls er nicht schon drin ist
         if (!book.getReservationQueue().contains(user)) {
             book.getReservationQueue().add(user);
             bookRepository.save(book);

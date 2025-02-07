@@ -24,10 +24,6 @@ public class UserDTO {
         this.borrowedBooks = user.getBorrowedBooks().stream()
                 .map(BorrowedBookDTO::new)  // Map Book → BorrowedBookDTO
                 .collect(Collectors.toList());
-
-        /*this.reservedBooks = user.getReservationQueue().stream()
-                .map(book -> new ReservedBookDTO(book, book.getQueuePosition(user)))
-                .collect(Collectors.toList());*/
         this.reservedBooks = user.getBorrowedBooks().stream()
                 .filter(book -> book.getReservationQueue().contains(user)) // Nur Bücher, wo der User in der Queue ist
                 .map(book -> new ReservedBookDTO(book, book.getQueuePosition(user)))
@@ -41,12 +37,12 @@ public class UserDTO {
         this.username = user.getUsername();
         this.role = (user.getRole() != null) ? user.getRole().name() : "UNKNOWN";
 
-        // 📖 Geliehene Bücher
+        //  Geliehene Bücher
         this.borrowedBooks = user.getBorrowedBooks().stream()
                 .map(BorrowedBookDTO::new)
                 .collect(Collectors.toList());
 
-        // 🏷 Reservierte Bücher über `reservedBooks` oder `Book.reservationQueue`
+        // Reservierte Bücher über `reservedBooks` oder `Book.reservationQueue`
         if (reservedBooks != null) {
             this.reservedBooks = reservedBooks.stream()
                     .map(book -> new ReservedBookDTO(book, getQueuePosition(user, book)))
@@ -80,10 +76,7 @@ public class UserDTO {
     {
         return borrowLimit;
     }
-   /* private int getQueuePosition(User user, Book book) {
-        int index = book.getReservationQueue().indexOf(user);
-        return (index >= 0) ? index + 1 : -1;
-    }*/
+
    private int getQueuePosition(User user, Book book) {
        return book.getReservationQueue().indexOf(user) + 1; // 1-basiert
    }
