@@ -14,8 +14,8 @@ mvn clean install
 ```
 Run the Application:
  ```sh
-    mvn spring-boot:run
-    ``` 
+mvn spring-boot:run
+   ``` 
 Run the Tests:
 ```sh
 mvn test
@@ -44,5 +44,4 @@ The following endpoints are available:
 
 ## License
 This project is licensed under the MIT License.
-```
 
