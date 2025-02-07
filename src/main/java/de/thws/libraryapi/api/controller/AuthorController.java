@@ -34,7 +34,7 @@ public class AuthorController
         this.bookService = bookService;
     }
 
-    // 🔐 ADMIN darf Autoren erstellen
+    //  ADMIN darf Autoren erstellen
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthorDTO> createAuthor(@RequestBody AuthorCreateDTO authorCreateDTO) {
@@ -49,7 +49,7 @@ public class AuthorController
         return ResponseEntity.status(HttpStatus.CREATED).body(new AuthorDTO(savedAuthor));
     }
 
-    // 🔐 ADMIN kann Bücher zu Autoren hinzufügen
+    //  ADMIN kann Bücher zu Autoren hinzufügen
     @PutMapping("/{authorId}/books")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthorDTO> addBooksToAuthor(@PathVariable Long authorId, @RequestBody List<Long> bookIds) {

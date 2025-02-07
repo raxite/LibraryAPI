@@ -27,7 +27,7 @@ public class GenreController
     }
 
 
-    // 🔐 ADMIN darf alle Genres sehen
+    //  ADMIN darf alle Genres sehen
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<GenreDTO>> getAllGenres() {
@@ -38,7 +38,7 @@ public class GenreController
         return ResponseEntity.ok(genres);
     }
 
-    // 🔐 ADMIN kann Genres bearbeiten
+    // ADMIN kann Genres bearbeiten
    @PutMapping("/{id}")
    @PreAuthorize("hasRole('ADMIN')")
    public ResponseEntity<GenreDTO> updateGenre(@PathVariable Long id, @RequestBody Genre updatedGenre) {
@@ -53,7 +53,7 @@ public class GenreController
    }
 
 
-    // 🔐 ADMIN kann Genres löschen
+    //  ADMIN kann Genres löschen
    @DeleteMapping("/{id}")
    @PreAuthorize("hasRole('ADMIN')")
    public ResponseEntity<String> deleteGenre(@PathVariable Long id) {
@@ -69,7 +69,7 @@ public class GenreController
        }
    }
 
-    // 🔐 ADMIN kann Genres hinzufügen
+    //  ADMIN kann Genres hinzufügen
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> addGenre(@RequestBody Genre newGenre) {

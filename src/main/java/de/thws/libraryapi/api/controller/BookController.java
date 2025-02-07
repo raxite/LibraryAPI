@@ -36,7 +36,7 @@ public class BookController
         this.genreService = genreService;
     }
 
-    // 🔐 ADMIN darf Bücher bearbeiten
+    //  ADMIN darf Bücher bearbeiten
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BookDTO> updateBook(@PathVariable Long id, @RequestBody Book updatedBook) {
@@ -75,7 +75,7 @@ public class BookController
 
 
 
-    // 📖 Beide Rollen können alle Bücher sehen
+    //  Beide Rollen können alle Bücher sehen
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<BookDTO>> getAllBooks() {
@@ -87,7 +87,7 @@ public class BookController
     }
 
 
-    // 📖 Beide Rollen können ein Buch nach ID abrufen
+    // Beide Rollen können ein Buch nach ID abrufen
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<BookDTO> getBookById(@PathVariable Long id) {
@@ -98,7 +98,7 @@ public class BookController
 
 
 
-    // 🔐 ADMIN darf Bücher hinzufügen
+    //  ADMIN darf Bücher hinzufügen
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> createBook(@RequestBody BookCreationDTO bookDTO) {
@@ -113,7 +113,7 @@ public class BookController
     }
 
 
-    // 🔐 ADMIN darf Bücher löschen
+    // ADMIN darf Bücher löschen
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteBook(@PathVariable Long id) {
@@ -129,7 +129,7 @@ public class BookController
     }
 
 
-    // 📖 Alle dürfen nach Büchern suchen
+    //  Alle dürfen nach Büchern suchen
     @GetMapping("/search")
     @PreAuthorize("permitAll()")
     public ResponseEntity<List<BookDTO>> searchBooks(

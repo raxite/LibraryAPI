@@ -28,7 +28,7 @@ public class UserController
         this.bookService = bookService;
     }
 
-    // 🔐 USER darf nur eigene Daten abrufen
+    //  USER darf nur eigene Daten abrufen
     @GetMapping("/{userId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
@@ -43,7 +43,7 @@ public class UserController
         return ResponseEntity.ok(new UserDTO(user, reservedBooks));
     }
 
-    // 🔐 ADMIN darf ALLE Benutzer sehen
+    //  ADMIN darf ALLE Benutzer sehen
    @GetMapping
    @PreAuthorize("hasRole('ADMIN')")
    public ResponseEntity<List<UserDTO>> getAllUsers() {
@@ -55,7 +55,7 @@ public class UserController
    }
 
 
-    // 🔐 USER kann sich registrieren (Public)
+    //  USER kann sich registrieren (Public)
     @PostMapping("/register")
     @PreAuthorize("permitAll()")
     public ResponseEntity<String> registerUser(@RequestBody User user) {
@@ -68,7 +68,7 @@ public class UserController
     }
 
 
-    // 🔐 USER kann Bücher reservieren
+    //  USER kann Bücher reservieren
     @PostMapping("/{userId}/reserveBook/{bookId}")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<String> reserveBook(@PathVariable Long userId, @PathVariable Long bookId) {
@@ -79,7 +79,7 @@ public class UserController
         return ResponseEntity.ok(message);
     }
 
-    // 🔐 USER kann Reservierungen stornieren
+    //  USER kann Reservierungen stornieren
     @DeleteMapping("/{userId}/reserveBook/{bookId}")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<String> cancelReservation(@PathVariable Long userId, @PathVariable Long bookId) {
@@ -90,7 +90,7 @@ public class UserController
         return ResponseEntity.ok(message);
     }
 
-// 🔐 USER kann Bücher ausleihen
+//  USER kann Bücher ausleihen
 @PostMapping("/{userId}/borrowBook/{bookId}")
 @PreAuthorize("hasRole('USER')")
 public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariable Long bookId) {
@@ -108,7 +108,7 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
 
 
 
-    // 🔐 USER kann Bücher zurückgeben
+    //  USER kann Bücher zurückgeben
     @PostMapping("/{userId}/returnBook/{bookId}")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<String> returnBook(@PathVariable Long userId, @PathVariable Long bookId) {
@@ -119,7 +119,7 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
         return ResponseEntity.ok(message);
     }
 
-    // 🔐 ADMIN darf Benutzer löschen
+    //  ADMIN darf Benutzer löschen
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
@@ -131,12 +131,7 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 🔄 Benutzer-Update (Passwort, Rolle, Borrow-Limit)
-     * - Benutzer kann sein Passwort ändern
-     * - Bibliothekar kann Rolle oder Borrow-Limit ändern
-     */
-    // 🔐 ADMIN kann Nutzer aktualisieren (Rolle, Borrow-Limit)
+    //  ADMIN kann Nutzer aktualisieren (Rolle, Borrow-Limit)
     @PutMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long userId, @RequestBody User updatedUser) {
@@ -148,17 +143,17 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
 
         User existingUser = existingUserOpt.get();
 
-        // 📌 Passwort ändern (nur wenn übermittelt)
+        //  Passwort ändern (nur wenn übermittelt)
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
             existingUser.setPassword(userService.encodePassword(updatedUser.getPassword())); // Hashen!
         }
 
-        // 📌 Borrow-Limit ändern (nur Bibliothekar/Admin)
+        //  Borrow-Limit ändern (nur Bibliothekar/Admin)
         if (updatedUser.getBorrowLimit() != null) {
             existingUser.setBorrowLimit(updatedUser.getBorrowLimit());
         }
 
-        // 📌 Benutzer-Rolle ändern (nur Bibliothekar/Admin)
+        //  Benutzer-Rolle ändern (nur Bibliothekar/Admin)
         if (updatedUser.getRole() != null) {
             existingUser.setRole(updatedUser.getRole());
         }
