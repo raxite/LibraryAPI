@@ -29,11 +29,11 @@ http://localhost:8080
 The following endpoints are available:
 
 - **Books**
-- `GET /bookse`: Get all books
-- `GET /books/{id}`: Get a book by ID
-- `POST /books`: Create a new book
-- `PUT /books/{id}`: Update a book
-- `DELETE /books/{id}`: Delete a book by ID
+    - `GET /bookse`: Get all books
+    - `GET /books/{id}`: Get a book by ID
+    - `POST /books`: Create a new book
+    - `PUT /books/{id}`: Update a book
+    - `DELETE /books/{id}`: Delete a book by ID
 
 - **Authors**
     - `GET /authors`: Get all authors
@@ -41,7 +41,4 @@ The following endpoints are available:
     - `POST /authors`: Create a new author
     - `PUT /authors/{id}`: Update an author
     - `DELETE /authors/{id}`: Delete an author by ID
-
-## License
-This project is licensed under the MIT License.
 
