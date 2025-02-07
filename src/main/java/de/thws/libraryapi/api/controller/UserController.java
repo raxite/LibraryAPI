@@ -49,7 +49,7 @@ public class UserController
    public ResponseEntity<List<UserDTO>> getAllUsers() {
        List<UserDTO> users = userService.getAllUsers()
                .stream()
-               .map(user -> new UserDTO(user, getReservedBooksForUser(user))) // 🔥 Neuer Konstruktor mit Reservierungen
+               .map(user -> new UserDTO(user, getReservedBooksForUser(user))) //  Neuer Konstruktor mit Reservierungen
                .collect(Collectors.toList());
        return ResponseEntity.ok(users);
    }
@@ -163,7 +163,7 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
     }
     private List<Book> getReservedBooksForUser(User user) {
         return bookService.getAllBooks().stream()
-                .filter(book -> book.getReservationQueue().contains(user)) // 🔍 User ist in Warteschlange?
+                .filter(book -> book.getReservationQueue().contains(user)) //  User ist in Warteschlange?
                 .collect(Collectors.toList());
     }
 
