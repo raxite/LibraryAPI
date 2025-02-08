@@ -6,6 +6,8 @@ import de.thws.libraryapi.domain.model.User;
 import de.thws.libraryapi.persistence.repository.BookRepository;
 import de.thws.libraryapi.persistence.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -27,13 +29,17 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public List<User> getAllUsers() {
+  /*  public List<User> getAllUsers() {
         return userRepository.findAll();
-    }
+    }*/
+  public Page<User> getAllUsers(Pageable pageable) {
+      return userRepository.findAll(pageable);
+  }
 
 
 
-public User registerUser(User user) {
+
+    public User registerUser(User user) {
     // Standardwerte setzen, damit Nutzer sich nicht selbst Admin-Rechte gibt
     user.setRole(Role.USER);
     user.setBorrowLimit(5);
@@ -64,6 +70,11 @@ public User registerUser(User user) {
         //  Benutzer kann das Buch nicht reservieren, wenn er es bereits ausgeliehen hat
         if (user.getBorrowedBooks().contains(book)) {
             return "User has already borrowed this book.";
+        }
+
+        // Prüfen, ob die Warteschlange das Limit erreicht hat (z. B. 10 Personen)
+        if (book.getReservationQueue().size() >= 10) {
+            return "Reservation limit for this book has been reached.";
         }
 
         //  Benutzer zur Warteschlange hinzufügen, falls er nicht schon drin ist

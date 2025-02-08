@@ -10,7 +10,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -27,16 +32,19 @@ public class GenreController
     }
 
 
-    //  ADMIN darf alle Genres sehen
-    @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<GenreDTO>> getAllGenres() {
-        List<GenreDTO> genres = genreService.getAllGenres()
-                .stream()
-                .map(GenreDTO::new)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(genres);
-    }
+@GetMapping
+@PreAuthorize("hasRole('ADMIN')")
+public ResponseEntity<Page<GenreDTO>> getAllGenres(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "5") int size,
+        @RequestParam(defaultValue = "id:asc") String sort) {
+
+    Pageable pageable = PageRequest.of(page, size, Sort.by(parseSortOrders(sort)));
+    Page<Genre> genresPage = genreService.getAllGenres(pageable);
+    Page<GenreDTO> genreDTOPage = genresPage.map(GenreDTO::new);
+
+    return ResponseEntity.ok(genreDTOPage);
+}
 
     // ADMIN kann Genres bearbeiten
    @PutMapping("/{id}")
@@ -79,4 +87,18 @@ public class GenreController
         Genre savedGenre = genreService.addGenre(newGenre);
         return ResponseEntity.status(HttpStatus.CREATED).body(new GenreDTO(savedGenre));
     }
+    private List<Sort.Order> parseSortOrders(String sort) {
+        return Arrays.stream(sort.split(","))
+                .map(s -> {
+                    String[] sortParams = s.split(":");
+                    String property = sortParams[0].trim();
+                    Sort.Direction direction = (sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc"))
+                            ? Sort.Direction.DESC
+                            : Sort.Direction.ASC;
+                    return new Sort.Order(direction, property);
+                })
+                .collect(Collectors.toList());
+    }
+
+    //eventuell paging anpassen das es komma statt : unterstützt oder andersherum einheitlich machen
 }

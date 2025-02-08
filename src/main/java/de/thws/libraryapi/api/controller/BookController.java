@@ -14,9 +14,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 
 @RestController
 @RequestMapping("/books")
@@ -75,16 +82,19 @@ public class BookController
 
 
 
-    //  Beide Rollen können alle Bücher sehen
-    @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<List<BookDTO>> getAllBooks() {
-        List<BookDTO> books = bookService.getAllBooks()
-                .stream()
-                .map(BookDTO::new)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(books);
-    }
+@GetMapping
+@PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+public ResponseEntity<Page<BookDTO>> getAllBooks(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "5") int size,
+        @RequestParam(defaultValue = "id,asc") String sort) {
+
+    Pageable pageable = PageRequest.of(page, size, Sort.by(parseSortOrders(sort)));
+    Page<Book> booksPage = bookService.getAllBooks(pageable);
+    Page<BookDTO> bookDTOPage = booksPage.map(BookDTO::new);
+
+    return ResponseEntity.ok(bookDTOPage);
+}
 
 
     // Beide Rollen können ein Buch nach ID abrufen
@@ -129,25 +139,37 @@ public class BookController
     }
 
 
-    //  Alle dürfen nach Büchern suchen
-    @GetMapping("/search")
-    @PreAuthorize("permitAll()") //
-    public ResponseEntity<List<BookDTO>> searchBooks(
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String author,
-            @RequestParam(required = false) String genre,
-            @RequestParam(required = false) Boolean availability,
-            @RequestParam(required = false) String startsWith)
-    {
-        List<BookDTO> books = bookService.searchBooks(title, author, genre, availability,startsWith)
-                .stream()
-                .map(BookDTO::new)
-                .collect(Collectors.toList());
-        if (books.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-        }
-        return ResponseEntity.ok(books);
-    }
+
+   @GetMapping("/search")
+   @PreAuthorize("permitAll()")
+   public ResponseEntity<Page<BookDTO>> searchBooks(
+           @RequestParam(required = false) String title,
+           @RequestParam(required = false) String author,
+           @RequestParam(required = false) String genre,
+           @RequestParam(required = false) Boolean availability,
+           @RequestParam(defaultValue = "0") int page,
+           @RequestParam(defaultValue = "10") int size,
+           @RequestParam(defaultValue = "id,asc") String sort) {
+
+       Pageable pageable = PageRequest.of(page, size, Sort.by(parseSortOrders(sort)));
+
+       Page<Book> booksPage = bookService.searchBooks(title, author, genre, availability, pageable);
+       Page<BookDTO> bookDTOPage = booksPage.map(BookDTO::new);
+
+       return ResponseEntity.ok(bookDTOPage);
+   }
+
+ private List<Sort.Order> parseSortOrders(String sort) {
+     String[] sortParams = sort.split(",");
+     String property = sortParams[0].trim();
+     Sort.Direction direction = (sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc"))
+             ? Sort.Direction.DESC
+             : Sort.Direction.ASC;
+     return List.of(new Sort.Order(direction, property));
+ }
+
+
+
 
 
 

@@ -10,6 +10,8 @@ import de.thws.libraryapi.persistence.repository.BookRepository;
 import de.thws.libraryapi.persistence.repository.GenreRepository;
 import de.thws.libraryapi.persistence.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.http.HttpStatus;
@@ -39,10 +41,15 @@ public class BookService
         return bookRepository.findById(id);
     }
 
-    public List<Book> getAllBooks()
-    {
+
+  public Page<Book> getAllBooks(Pageable pageable) {
+      return bookRepository.findAll(pageable);
+  }
+    public List<Book> getAllBooks() {
         return bookRepository.findAll();
     }
+
+
 
     public Book addBook(Book book)
     {
@@ -52,21 +59,20 @@ public class BookService
     {
         bookRepository.deleteById(id);
     }
-    public List<Book> searchBooks(String title, String author, String genre, Boolean availability, String startsWith) {
-        if (title != null) {
-            return bookRepository.findByTitleContaining(title);
-        } else if (startsWith != null) {
-            return bookRepository.findByTitleStartingWith(startsWith);
-        } else if (author != null) {
-            return bookRepository.findByAuthorName(author);
-        } else if (genre != null) {
-            return bookRepository.findByGenreName(genre);
-        } else if (availability != null) {
-            return bookRepository.findByAvailability(availability);
-        } else {
-            return bookRepository.findAll();
-        }
-    }
+
+   public Page<Book> searchBooks(String title, String author, String genre, Boolean availability, Pageable pageable) {
+       if (title != null) {
+           return bookRepository.findByTitleContaining(title, pageable);
+       } else if (author != null) {
+           return bookRepository.findByAuthorName(author, pageable);
+       } else if (genre != null) {
+           return bookRepository.findByGenreName(genre, pageable);
+       } else if (availability != null) {
+           return bookRepository.findByAvailability(availability, pageable);
+       } else {
+           return bookRepository.findAll(pageable);
+       }
+   }
     public Book updateBook(Book book) {
         return bookRepository.save(book);
     }

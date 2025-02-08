@@ -4,6 +4,8 @@ package de.thws.libraryapi.domain.service;
 import de.thws.libraryapi.domain.model.Genre;
 import de.thws.libraryapi.persistence.repository.GenreRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -19,10 +21,13 @@ public class GenreService
         this.genreRepository = genreRepository;
     }
 
-    public List<Genre> getAllGenres()
+  /*  public List<Genre> getAllGenres()
     {
         return genreRepository.findAll();
-    }
+    }*/
+  public Page<Genre> getAllGenres(Pageable pageable) {
+      return genreRepository.findAll(pageable);
+  }
     public Optional<Genre> getGenreById(Long id) {
         return genreRepository.findById(id);
     }

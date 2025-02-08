@@ -3,6 +3,10 @@ package de.thws.libraryapi.api.controller;
 import de.thws.libraryapi.domain.model.Role;
 import de.thws.libraryapi.persistence.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import de.thws.libraryapi.domain.model.Book;
 import de.thws.libraryapi.domain.model.User;
@@ -17,6 +21,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -60,16 +65,37 @@ public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId, Authentica
 }
 
 
-    //  ADMIN darf ALLE Benutzer sehen
-   @GetMapping
-   @PreAuthorize("hasRole('ADMIN')")
-   public ResponseEntity<List<UserDTO>> getAllUsers() {
-       List<UserDTO> users = userService.getAllUsers()
-               .stream()
-               .map(user -> new UserDTO(user, getReservedBooksForUser(user))) //  Neuer Konstruktor mit Reservierungen
-               .collect(Collectors.toList());
-       return ResponseEntity.ok(users);
-   }
+
+  @GetMapping
+  @PreAuthorize("hasRole('ADMIN')")
+  public ResponseEntity<Page<UserDTO>> getAllUsers(
+          @RequestParam(defaultValue = "0") int page,
+          @RequestParam(defaultValue = "5") int size,
+          @RequestParam(defaultValue = "id:asc") String sort) {
+
+      Pageable pageable = PageRequest.of(page, size, Sort.by(parseSortOrders(sort)));
+      Page<User> usersPage = userService.getAllUsers(pageable);
+      Page<UserDTO> userDTOPage = usersPage.map(user -> new UserDTO(user, getReservedBooksForUser(user)));
+
+      return ResponseEntity.ok(userDTOPage);
+  }
+
+
+    private List<Sort.Order> parseSortOrders(String sort) {
+        return Arrays.stream(sort.split(","))
+                .map(s -> {
+                    String[] sortParams = s.split(":");
+                    String property = sortParams[0].trim();
+                    Sort.Direction direction = (sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc"))
+                            ? Sort.Direction.DESC
+                            : Sort.Direction.ASC;
+                    return new Sort.Order(direction, property);
+                })
+                .collect(Collectors.toList());
+    }
+
+
+
 
     @PostMapping("/register")
     @PreAuthorize("permitAll()")
@@ -249,6 +275,8 @@ public ResponseEntity<UserDTO> updateUser(@PathVariable Long userId, @RequestBod
                 .filter(book -> book.getReservationQueue().contains(user)) //  User ist in Warteschlange?
                 .collect(Collectors.toList());
     }
+
+    //eventuell paging noch hinzufügen, sodass die liste
 
 }
 
