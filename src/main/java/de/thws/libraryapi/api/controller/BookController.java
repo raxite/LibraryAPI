@@ -131,7 +131,7 @@ public class BookController
 
     //  Alle dürfen nach Büchern suchen
     @GetMapping("/search")
-    @PreAuthorize("permitAll()")
+    @PreAuthorize("permitAll()") //
     public ResponseEntity<List<BookDTO>> searchBooks(
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String author,

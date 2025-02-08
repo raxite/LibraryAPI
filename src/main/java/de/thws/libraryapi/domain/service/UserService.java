@@ -33,12 +33,16 @@ public class UserService {
 
 
 
-    public User registerUser(User user) {
-        if (user.getRole() == null) {
-            user.setRole(Role.USER);  // Setzt eine Standardrolle
-        }
-        return userRepository.save(user);
-    }
+public User registerUser(User user) {
+    // Standardwerte setzen, damit Nutzer sich nicht selbst Admin-Rechte gibt
+    user.setRole(Role.USER);
+    user.setBorrowLimit(5);
+
+    // 🔥 Passwort verschlüsseln, bevor es gespeichert wird
+    user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+    return userRepository.save(user);
+}
 
 
     public String addUserToReservationQueue(Long bookId, Long userId) {
@@ -157,6 +161,7 @@ public class UserService {
         userRepository.deleteById(userId);
     }
 
+    @Transactional
     public User updateUser(User user) {
         return userRepository.save(user);
     }

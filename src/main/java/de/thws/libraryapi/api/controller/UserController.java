@@ -1,5 +1,8 @@
 package de.thws.libraryapi.api.controller;
 
+import de.thws.libraryapi.domain.model.Role;
+import de.thws.libraryapi.persistence.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.access.prepost.PreAuthorize;
 import de.thws.libraryapi.domain.model.Book;
 import de.thws.libraryapi.domain.model.User;
@@ -9,6 +12,9 @@ import de.thws.libraryapi.dto.UserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,27 +27,38 @@ public class UserController
 {
     private final UserService userService;
     private final BookService bookService;
+    private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
 
     @Autowired
-    public UserController(UserService userService, BookService bookService) {
+    public UserController(UserService userService, BookService bookService, PasswordEncoder passwordEncoder, UserRepository userRepository) {
         this.userService = userService;
         this.bookService = bookService;
+        this.passwordEncoder = passwordEncoder;
+        this.userRepository = userRepository;
     }
 
-    //  USER darf nur eigene Daten abrufen
-    @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
-        Optional<User> userOpt = userService.getUserById(userId);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+@GetMapping("/{userId}")
+@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId, Authentication authentication) {
+    Optional<User> userOpt = userService.getUserById(userId);
 
-        User user = userOpt.get();
-        List<Book> reservedBooks = userService.getReservedBooksByUser(user);
-
-        return ResponseEntity.ok(new UserDTO(user, reservedBooks));
+    if (userOpt.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
+
+    User user = userOpt.get();
+
+    //  Prüfen, ob der angemeldete User der gleiche ist oder ein Admin
+    if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+            && !authentication.getName().equals(user.getUsername())) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+    }
+
+    List<Book> reservedBooks = userService.getReservedBooksByUser(user);
+    return ResponseEntity.ok(new UserDTO(user, reservedBooks));
+}
+
 
     //  ADMIN darf ALLE Benutzer sehen
    @GetMapping
@@ -54,49 +71,40 @@ public class UserController
        return ResponseEntity.ok(users);
    }
 
-
-    //  USER kann sich registrieren (Public)
     @PostMapping("/register")
     @PreAuthorize("permitAll()")
     public ResponseEntity<String> registerUser(@RequestBody User user) {
-        if (user.getRole() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Role must not be null");
+        //  Überprüfen, ob der Benutzername bereits existiert
+        if (userRepository.findByUsername(user.getUsername()).isPresent()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Username is already taken.");
         }
 
-        userService.registerUser(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body("User successfully created");
+        //  Setzt die Standardwerte für neue Nutzer
+        user.setRole(Role.USER); // Jeder neue User wird automatisch "USER"
+        user.setBorrowLimit(5);  // Standard-Borrow-Limit ist 5
+
+        //  Passwort verschlüsseln
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+        //  User speichern
+        userRepository.save(user);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body("User created successfully.");
     }
 
-
-    //  USER kann Bücher reservieren
-    @PostMapping("/{userId}/reserveBook/{bookId}")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<String> reserveBook(@PathVariable Long userId, @PathVariable Long bookId) {
-        String message = userService.addUserToReservationQueue(bookId, userId);
-        if (message.contains("not found")) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
-        }
-        return ResponseEntity.ok(message);
-    }
-
-    //  USER kann Reservierungen stornieren
-    @DeleteMapping("/{userId}/reserveBook/{bookId}")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<String> cancelReservation(@PathVariable Long userId, @PathVariable Long bookId) {
-        String message = userService.removeUserFromReservationQueue(bookId, userId);
-        if (message.contains("not found") || message.contains("not in reservation")) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
-        }
-        return ResponseEntity.ok(message);
-    }
-
-//  USER kann Bücher ausleihen
 @PostMapping("/{userId}/borrowBook/{bookId}")
-@PreAuthorize("hasRole('USER')")
-public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariable Long bookId) {
+@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariable Long bookId, Authentication authentication) {
+
+    //  Prüfen, ob der User seine eigene ID nutzt oder ein Admin ist
+    if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+            && !authentication.getName().equals(userService.getUserById(userId).map(User::getUsername).orElse(""))) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Users can only borrow books for themselves.");
+    }
+
     String message = userService.borrowBook(bookId, userId);
 
-    // Überprüfen, ob die Nachricht einen Fehler enthält
+    // Fehlerüberprüfung
     if (message.toLowerCase().contains("not found") ||
             message.toLowerCase().contains("limit exceeded") ||
             message.toLowerCase().contains("already borrowed")) {
@@ -106,18 +114,69 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
     return ResponseEntity.ok(message); // Erfolgreiche Ausleihe -> 200 OK
 }
 
+  @PostMapping("/{userId}/returnBook/{bookId}")
+  @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+  public ResponseEntity<String> returnBook(@PathVariable Long userId, @PathVariable Long bookId, Authentication authentication) {
+
+      //  Prüfen, ob der User seine eigene ID nutzt oder ein Admin ist
+      if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+              && !authentication.getName().equals(userService.getUserById(userId).map(User::getUsername).orElse(""))) {
+          return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Users can only return their own books.");
+      }
+
+      String message = userService.returnBook(bookId, userId);
+
+      // Falls das Buch nicht ausgeliehen war -> 400 Bad Request
+      if (message.contains("not borrowed")) {
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
+      }
+
+      return ResponseEntity.ok(message); // Erfolgreiche Rückgabe -> 200 OK
+  }
 
 
-    //  USER kann Bücher zurückgeben
-    @PostMapping("/{userId}/returnBook/{bookId}")
-    @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<String> returnBook(@PathVariable Long userId, @PathVariable Long bookId) {
-        String message = userService.returnBook(bookId, userId);
-        if (message.contains("not borrowed")) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
-        }
-        return ResponseEntity.ok(message);
-    }
+
+
+   @PostMapping("/{userId}/reserveBook/{bookId}")
+   @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+   public ResponseEntity<String> reserveBook(@PathVariable Long userId, @PathVariable Long bookId, Authentication authentication) {
+
+       // Prüfen, ob der User seine eigene ID nutzt oder ein Admin ist
+       if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+               && !authentication.getName().equals(userService.getUserById(userId).map(User::getUsername).orElse(""))) {
+           return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Users can only reserve books for themselves.");
+       }
+
+       String message = userService.addUserToReservationQueue(bookId, userId);
+
+       if (message.contains("not found")) {
+           return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
+       }
+
+       return ResponseEntity.ok(message);
+   }
+
+
+
+  @DeleteMapping("/{userId}/reserveBook/{bookId}")
+  @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+  public ResponseEntity<String> cancelReservation(@PathVariable Long userId, @PathVariable Long bookId, Authentication authentication) {
+
+      //  Prüfen, ob der User seine eigene ID nutzt oder ein Admin ist
+      if (!authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+              && !authentication.getName().equals(userService.getUserById(userId).map(User::getUsername).orElse(""))) {
+          return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Users can only cancel their own reservations.");
+      }
+
+      String message = userService.removeUserFromReservationQueue(bookId, userId);
+
+      if (message.contains("not found") || message.contains("not in reservation")) {
+          return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
+      }
+
+      return ResponseEntity.ok(message);
+  }
+
 
     //  ADMIN darf Benutzer löschen
     @DeleteMapping("/{userId}")
@@ -131,36 +190,60 @@ public ResponseEntity<String> borrowBook(@PathVariable Long userId, @PathVariabl
         return ResponseEntity.noContent().build();
     }
 
-    //  ADMIN kann Nutzer aktualisieren (Rolle, Borrow-Limit)
-    @PutMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Long userId, @RequestBody User updatedUser) {
-        Optional<User> existingUserOpt = userService.getUserById(userId);
 
-        if (existingUserOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
+@PutMapping("/{userId}")
+@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+public ResponseEntity<UserDTO> updateUser(@PathVariable Long userId, @RequestBody User updatedUser, Authentication authentication) {
+    Optional<User> existingUserOpt = userService.getUserById(userId);
 
-        User existingUser = existingUserOpt.get();
+    if (existingUserOpt.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
 
-        //  Passwort ändern (nur wenn übermittelt)
+    User existingUser = existingUserOpt.get();
+
+    //  Prüfen, ob der User seine eigene ID nutzt oder ein Admin ist
+    boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+    boolean isSelf = authentication.getName().equals(existingUser.getUsername());
+
+    if (!isAdmin && !isSelf) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    //  Username darf NICHT geändert werden!
+    if (updatedUser.getUsername() != null && !updatedUser.getUsername().equals(existingUser.getUsername())) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+    }
+
+    //  Benutzer kann nur seinen eigenen Namen und Passwort ändern
+    if (isSelf) {
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
             existingUser.setPassword(userService.encodePassword(updatedUser.getPassword())); // Hashen!
         }
+        if (updatedUser.getName() != null && !updatedUser.getName().isEmpty()) {
+            existingUser.setName(updatedUser.getName());
+        }
+    }
 
-        //  Borrow-Limit ändern (nur Bibliothekar/Admin)
+    //  Admin kann ALLES ändern (außer Username)
+    if (isAdmin) {
         if (updatedUser.getBorrowLimit() != null) {
             existingUser.setBorrowLimit(updatedUser.getBorrowLimit());
         }
-
-        //  Benutzer-Rolle ändern (nur Bibliothekar/Admin)
         if (updatedUser.getRole() != null) {
             existingUser.setRole(updatedUser.getRole());
         }
-
-        User savedUser = userService.updateUser(existingUser);
-        return ResponseEntity.ok(new UserDTO(savedUser));
     }
+
+    //  Benutzer speichern & neue Daten aus der DB abrufen
+    userService.updateUser(existingUser);
+    User updatedUserFromDb = userService.getUserById(userId).orElseThrow(); // DB reload fix!
+
+    return ResponseEntity.ok(new UserDTO(updatedUserFromDb));
+}
+
+
+
     private List<Book> getReservedBooksForUser(User user) {
         return bookService.getAllBooks().stream()
                 .filter(book -> book.getReservationQueue().contains(user)) //  User ist in Warteschlange?

@@ -76,7 +76,7 @@ public class AuthorController
 
 
 
-    // 📖 Beide Rollen können Autoren sehen
+    //  Beide Rollen können Autoren sehen
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<List<AuthorDTO>> getAllAuthors() {
@@ -86,7 +86,7 @@ public class AuthorController
                 .collect(Collectors.toList());
         return ResponseEntity.ok(authors);
     }
-    // 🔐 ADMIN kann Autoren aktualisieren
+    //  ADMIN kann Autoren aktualisieren
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthorDTO> updateAuthor(@PathVariable Long id, @RequestBody Author updatedAuthor) {
@@ -106,8 +106,24 @@ public class AuthorController
         Author savedAuthor = authorService.updateAuthor(existingAuthor);
         return ResponseEntity.ok(new AuthorDTO(savedAuthor));
     }
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<AuthorDTO>> searchAuthors(@RequestParam String name) {
+        List<AuthorDTO> authors = authorService.searchAuthorsByName(name)
+                .stream()
+                .map(AuthorDTO::new)
+                .collect(Collectors.toList());
 
-    // 🔐 ADMIN kann Autoren löschen
+        if (authors.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        }
+
+        return ResponseEntity.ok(authors);
+    }
+
+
+
+    //  ADMIN kann Autoren löschen
    @DeleteMapping("/{id}")
    @PreAuthorize("hasRole('ADMIN')")
    public ResponseEntity<String> deleteAuthor(@PathVariable Long id) {

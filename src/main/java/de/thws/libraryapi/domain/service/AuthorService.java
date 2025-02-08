@@ -56,6 +56,9 @@ public class AuthorService
         authorRepository.deleteById(id);
         System.out.println("Author with ID " + id + " deleted successfully.");
     }
+    public List<Author> searchAuthorsByName(String name) {
+        return authorRepository.findByNameContainingIgnoreCase(name);
+    }
 
 
     public List<Author> getAllAuthors()
