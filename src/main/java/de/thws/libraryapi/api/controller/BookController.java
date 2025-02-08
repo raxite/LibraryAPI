@@ -168,15 +168,4 @@ public ResponseEntity<Page<BookDTO>> getAllBooks(
      return List.of(new Sort.Order(direction, property));
  }
 
-
-
-
-
-
-
-
-
-
-
-
 }

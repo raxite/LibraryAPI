@@ -10,6 +10,8 @@ import de.thws.libraryapi.persistence.repository.BookRepository;
 import de.thws.libraryapi.persistence.repository.GenreRepository;
 import de.thws.libraryapi.persistence.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,12 +38,14 @@ public class BookService
         this.genreRepository = genreRepository;
     }
 
+    @Cacheable(value = "books", key = "#id")
     public Optional<Book> getBookById(Long id)
     {
         return bookRepository.findById(id);
     }
 
 
+    @Cacheable(value = "allBooks", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
   public Page<Book> getAllBooks(Pageable pageable) {
       return bookRepository.findAll(pageable);
   }
@@ -55,11 +59,13 @@ public class BookService
     {
         return bookRepository.save(book);
     }
+    @CacheEvict(value = {"books", "allBooks", "bookSearchResults"}, key = "#id")
     public void deleteBook(Long id)
     {
         bookRepository.deleteById(id);
     }
 
+    @Cacheable(value = "bookSearchResults", key = "#title + '-' + #author + '-' + #genre + '-' + #availability + '-' + #pageable.pageNumber + '-' + #pageable.pageSize")
    public Page<Book> searchBooks(String title, String author, String genre, Boolean availability, Pageable pageable) {
        if (title != null) {
            return bookRepository.findByTitleContaining(title, pageable);
@@ -73,12 +79,16 @@ public class BookService
            return bookRepository.findAll(pageable);
        }
    }
+
+    @CacheEvict(value = {"books", "allBooks", "bookSearchResults"}, key = "#book.id")
     public Book updateBook(Book book) {
         return bookRepository.save(book);
     }
     public List<Book> getBooksByIds(List<Long> bookIds) {
         return bookRepository.findAllById(bookIds);
     }
+
+    @CacheEvict(value = {"books", "allBooks", "bookSearchResults"}, allEntries = true)
     public Book createBook(BookCreationDTO bookDTO) {
         // Author suchen
         Author author = authorRepository.findById(bookDTO.getAuthorId())
@@ -105,14 +115,5 @@ public class BookService
 
         return savedBook;
     }
-
-
-
-
-
-
-
-
-
 
 }

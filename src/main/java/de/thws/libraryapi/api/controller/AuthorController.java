@@ -6,6 +6,7 @@ import de.thws.libraryapi.domain.service.AuthorService;
 import de.thws.libraryapi.domain.service.BookService;
 import de.thws.libraryapi.dto.AuthorCreateDTO;
 import de.thws.libraryapi.dto.AuthorDTO;
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;

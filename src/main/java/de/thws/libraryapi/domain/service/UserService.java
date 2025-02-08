@@ -6,6 +6,8 @@ import de.thws.libraryapi.domain.model.User;
 import de.thws.libraryapi.persistence.repository.BookRepository;
 import de.thws.libraryapi.persistence.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,9 +31,8 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
-  /*  public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }*/
+
+    @Cacheable(value = "allUsers", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
   public Page<User> getAllUsers(Pageable pageable) {
       return userRepository.findAll(pageable);
   }
@@ -39,6 +40,7 @@ public class UserService {
 
 
 
+    @CacheEvict(value = {"users", "allUsers"}, allEntries = true)
     public User registerUser(User user) {
     // Standardwerte setzen, damit Nutzer sich nicht selbst Admin-Rechte gibt
     user.setRole(Role.USER);
@@ -51,6 +53,7 @@ public class UserService {
 }
 
 
+    @CacheEvict(value = {"books", "reservedBooks"}, allEntries = true)
     public String addUserToReservationQueue(Long bookId, Long userId) {
         Optional<Book> bookOpt = bookRepository.findById(bookId);
         Optional<User> userOpt = userRepository.findById(userId);
@@ -87,6 +90,7 @@ public class UserService {
         }
     }
 
+    @CacheEvict(value = {"books", "reservedBooks"}, allEntries = true)
     public String removeUserFromReservationQueue(Long bookId, Long userId) {
         Optional<Book> bookOpt = bookRepository.findById(bookId);
         Optional<User> userOpt = userRepository.findById(userId);
@@ -107,6 +111,8 @@ public class UserService {
 
         return "User removed from reservation queue.";
     }
+
+    @CacheEvict(value = {"users", "allUsers"}, allEntries = true)
     @Transactional
     public String borrowBook(Long bookId, Long userId) {
         Optional<Book> bookOpt = bookRepository.findById(bookId);
@@ -141,6 +147,7 @@ public class UserService {
         return "Book borrowed successfully!";
     }
 
+    @CacheEvict(value = {"users", "allUsers"}, allEntries = true)
     @Transactional
     public String returnBook(Long bookId, Long userId) {
         Optional<Book> bookOpt = bookRepository.findById(bookId);
@@ -165,13 +172,16 @@ public class UserService {
 
         return "Book returned successfully!";
     }
+    @Cacheable(value = "users", key = "#userId")
     public Optional<User> getUserById(Long userId) {
         return userRepository.findById(userId);
     }
+    @CacheEvict(value = {"users", "allUsers"}, allEntries = true)
     public void deleteUser(Long userId) {
         userRepository.deleteById(userId);
     }
 
+    @CacheEvict(value = {"users", "allUsers"}, allEntries = true)
     @Transactional
     public User updateUser(User user) {
         return userRepository.save(user);
@@ -181,6 +191,7 @@ public class UserService {
         return passwordEncoder.encode(password);
     }
 
+    @Cacheable(value = "reservedBooks", key = "#user.id")
     public List<Book> getReservedBooksByUser(User user) {
         return bookRepository.findAll().stream()
                 .filter(book -> book.getReservationQueue().contains(user))

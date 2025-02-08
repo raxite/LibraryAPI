@@ -4,6 +4,8 @@ package de.thws.libraryapi.domain.service;
 import de.thws.libraryapi.domain.model.Genre;
 import de.thws.libraryapi.persistence.repository.GenreRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,17 +23,17 @@ public class GenreService
         this.genreRepository = genreRepository;
     }
 
-  /*  public List<Genre> getAllGenres()
-    {
-        return genreRepository.findAll();
-    }*/
+
+    @Cacheable(value = "allGenres", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort")
   public Page<Genre> getAllGenres(Pageable pageable) {
       return genreRepository.findAll(pageable);
   }
+    @Cacheable(value = "genres", key = "#id")
     public Optional<Genre> getGenreById(Long id) {
         return genreRepository.findById(id);
     }
 
+    @CacheEvict(value = {"genres", "allGenres"}, allEntries = true)
     public Genre updateGenre(Long id, Genre updatedGenre) {
         Genre existingGenre = genreRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Genre with ID " + id + " not found"));
@@ -47,6 +49,7 @@ public class GenreService
     }
 
 
+    @CacheEvict(value = {"genres", "allGenres"}, allEntries = true)
     public void deleteGenre(Long id) {
         Genre genre = genreRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Genre with ID " + id + " not found"));
@@ -59,6 +62,7 @@ public class GenreService
         genreRepository.delete(genre);
     }
 
+    @CacheEvict(value = {"genres", "allGenres"}, allEntries = true)
     public Genre addGenre(Genre genre)
     {
         return genreRepository.save(genre);
